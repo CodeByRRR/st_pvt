@@ -22,6 +22,19 @@ static NUMPY_MODULE: GILOnceCell<Py<PyModule>> = GILOnceCell::new();
 static TENSORFLOW_MODULE: GILOnceCell<Py<PyModule>> = GILOnceCell::new();
 static FLAX_MODULE: GILOnceCell<Py<PyModule>> = GILOnceCell::new();
 
+
+/* 
+the prepare function extracts information about the shape, data type, and data bytes of PyTorch tensors from a dictionary in Python, and converts this information into a Rust HashMap of TensorView objects. The resulting HashMap can then be used in Rust code to perform tensor computations.
+
+The function iterates over each key-value pair in the input HashMap using a for loop, where the key is the name of the tensor and the value is a &PyDict containing metadata and binary data for that tensor. Inside this loop, the function first initializes some Option variables for the shape, data type, and binary data of the tensor, which will be set later if their corresponding keys exist in the PyDict.
+
+Next, the function iterates over each key-value pair in the &PyDict using another for loop. For each pair, the function extracts the key as a &str and matches it to one of three possible keys: "shape", "dtype", or "data". If the key matches "shape", the function extracts the value as a Vec<usize> and sets the shape variable. If the key matches "dtype", the function extracts the value as a &str and converts it to a Dtype enum value using a match expression. If the key matches "data", the function extracts the value as a &[u8] (i.e., a slice of bytes) and sets the data variable. If the key does not match any of these possibilities, the function prints a message to the console indicating that the key was ignored.
+
+After the inner loop completes, the function checks that the shape, dtype, and data variables have been set, and if not, it returns an error message indicating which variable is missing. If all variables are set, the function creates a new TensorView object using the new method, passing in the dtype, shape, and data variables as arguments. If this method returns an error, the function returns an error message. If the TensorView object is created successfully, the function adds it to the tensors hashmap using the tensor name as the key.
+
+Finally, the function returns the tensors hashmap as the result of the function. If any errors were encountered during the function's execution, they will be propagated up to the caller as an error message.
+*/
+
 fn prepare(tensor_dict: HashMap<String, &PyDict>) -> PyResult<HashMap<String, TensorView<'_>>> {
     let mut tensors = HashMap::new();
     for (tensor_name, tensor_desc) in tensor_dict {
