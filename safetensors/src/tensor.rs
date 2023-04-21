@@ -64,6 +64,14 @@ impl std::fmt::Display for SafeTensorError {
 
 impl std::error::Error for SafeTensorError {}
 
+/*
+PreparedData is a struct that represents the binary data of a serialized tensor.
+It has three fields:
+n: the number of bytes in the serialized tensor
+header_bytes: a vector of bytes representing the header information for the tensor (e.g., the tensor's dtype, shape, etc.)
+offset: an integer representing the offset in bytes from the beginning of the binary data where the tensor's data buffer begins.
+*/
+
 struct PreparedData {
     n: u64,
     header_bytes: Vec<u8>,
@@ -161,6 +169,16 @@ pub trait View {
     /// for instance for tensors residing in GPU.
     fn data_len(&self) -> usize;
 }
+
+/*
+This function prepare() takes in an iterator of tuples containing a string and a type implementing the View trait. It also takes an optional hash map of string keys and string values. It returns a tuple containing a PreparedData struct and a vector of type V (where V: View).
+
+The function first sorts the data by dtype in descending order and then by name. It then creates an empty vector of V type and a vector hmetadata of tuples that contains the tensor name and tensor info such as dtype, shape and offset.
+
+It then calculates the total number of bytes the header data will occupy by serializing the metadata using serde-json crate and padding with spaces if needed to ensure alignment. The header data along with its length is then stored in a PreparedData struct.
+
+Finally, the function returns a tuple containing PreparedData and the vector of V type.
+*/
 
 fn prepare<S: AsRef<str> + Ord + std::fmt::Display, V: View, I: IntoIterator<Item = (S, V)>>(
     data: I,
@@ -518,6 +536,22 @@ pub struct TensorView<'data> {
     data: &'data [u8],
 }
 
+/*
+This code defines an implementation of the View trait for a borrowed reference to a TensorView object with a lifetime parameter 'data.
+
+The View trait provides methods for accessing the data type, shape, and binary data of a tensor. The impl block defines four methods that implement the View trait for the TensorView object:
+
+dtype: This method returns the data type of the tensor, which is stored in the dtype field of the TensorView struct.
+
+shape: This method returns a reference to the shape of the tensor, which is stored in the shape field of the TensorView struct.
+
+data: This method returns a borrowed reference to the binary data of the tensor, which is stored in the data field of the TensorView struct. The Cow<[u8]> return type is a borrowable and ownable binary data slice, which is converted from the data field of the TensorView struct.
+
+data_len: This method returns the length of the binary data of the tensor, which is obtained from the data field of the TensorView struct using the len method.
+
+These methods provide a standardized way of accessing the data type, shape, and binary data of a TensorView object, which can be used across different contexts and programming languages.
+*/
+
 impl<'data> View for &TensorView<'data> {
     fn dtype(&self) -> Dtype {
         self.dtype
@@ -535,6 +569,20 @@ impl<'data> View for &TensorView<'data> {
         self.data.len()
     }
 }
+
+/*
+This is the implementation of the TensorView type, a simple struct that represents a view of a tensor's data buffer.
+
+The new() method is used to create a new TensorView object, and takes as arguments the tensor's dtype, shape, and data buffer. If the length of the data buffer does not match the expected size of the tensor (based on its dtype and shape), the new() method returns an error.
+
+The dtype() method returns the dtype of the tensor.
+
+The shape() method returns a borrowed reference to the shape of the tensor.
+
+The data() method returns a borrowed reference to the data buffer of the tensor.
+
+The sliced_data() method returns a SliceIterator object, which provides a way to iterate over slices of the tensor's data buffer.
+*/
 
 impl<'data> TensorView<'data> {
     /// Create new tensor view
